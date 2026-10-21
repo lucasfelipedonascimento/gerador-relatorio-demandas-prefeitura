@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "api/gerar.py",
-      "use": "@vercel/python"
+      "use": "@vercel/python",
+      "config": {
+        "includeFiles": ["public/**"]
+      }
     }
   ],
   "routes": [
