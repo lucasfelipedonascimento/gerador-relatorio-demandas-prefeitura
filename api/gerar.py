@@ -25,22 +25,29 @@ MAX_FOTOS = 10
 LIMITE_RESPOSTA = 3_200_000  # bytes
 PRESETS = [(1100, 72), (900, 62), (720, 52), (600, 45)]
 
-# Diretório público para o front-end na Vercel
-PUBLIC_DIR = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), "..", "public")
-)
+# Caminho absoluto robusto para a pasta public na raiz do projeto
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PUBLIC_DIR = os.path.join(BASE_DIR, "public")
 
 
 # Rota para servir a página inicial (Front-end)
 @app.get("/")
 def serve_index():
-  return send_from_directory(PUBLIC_DIR, "index.html")
+  index_path = os.path.join(PUBLIC_DIR, "index.html")
+  if os.path.exists(index_path):
+    return send_from_directory(PUBLIC_DIR, "index.html")
+  return (
+      f"Erro 404: index.html não encontrado no diretório. Caminho procurado:"
+      f" {index_path}",
+      404,
+  )
 
 
 # Rota para servir arquivos estáticos (CSS, JS, imagens) da pasta public
 @app.get("/<path:path>")
 def serve_static(path):
-  if os.path.exists(os.path.join(PUBLIC_DIR, path)):
+  file_path = os.path.join(PUBLIC_DIR, path)
+  if os.path.exists(file_path):
     return send_from_directory(PUBLIC_DIR, path)
   return "Not Found", 404
 
