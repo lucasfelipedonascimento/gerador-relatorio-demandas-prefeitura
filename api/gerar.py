@@ -18,30 +18,24 @@ from lib.docx_builder import gerar_docx, preparar_imagem  # noqa: E402
 from lib.pdf_builder import docx_para_pdf  # noqa: E402
 from lib.validators import validar_formulario  # noqa: E402
 
-
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # a Vercel já corta em 4,5 MB
+app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # Limite de 5 MB
 
 MAX_FOTOS = 10
-LIMITE_RESPOSTA = 3_200_000  # bytes (docx + pdf) -> ~4,3 MB em base64, abaixo de 4,5 MB
-# (lado máximo em px, qualidade JPEG): tenta o melhor e vai reduzindo se a resposta ficar grande
+LIMITE_RESPOSTA = 3_200_000  # bytes
 PRESETS = [(1100, 72), (900, 62), (720, 52), (600, 45)]
 
-# Inicializa o app Flask apontando a pasta 'public' correta para o ambiente da Vercel
+# Diretório público para o front-end na Vercel
 PUBLIC_DIR = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "..", "public")
 )
 
-app = Flask(__name__)
 
-
-# Rota GET para servir o front-end (index.html)
 @app.get("/")
 def serve_index():
   return send_from_directory(PUBLIC_DIR, "index.html")
 
 
-# (Opcional) Se você tiver arquivos estáticos como CSS/JS dentro da pasta public
 @app.get("/<path:path>")
 def serve_static(path):
   if os.path.exists(os.path.join(PUBLIC_DIR, path)):
@@ -49,76 +43,83 @@ def serve_static(path):
   return "Not Found", 404
 
 
-# O restante da sua rota de API continua aqui...
-@app.post("/gerar")  # ou a rota que você usa para gerar o documento
-def gerar():
-  # Sua lógica de backend existente
-  pass
-
-
 def _slug(texto: str) -> str:
-    texto = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
-    return re.sub(r"[^A-Za-z0-9]+", "_", texto).strip("_")[:40] or "documento"
+  texto = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
+  return re.sub(r"[^A-Za-z0-9]+", "_", texto).strip("_")[:40] or "documento"
 
 
 def _arquivo_enviado(f) -> bytes | None:
-    if f is None or not f.filename:
-        return None
-    blob = f.read()
-    return blob or None
+  if f is None or not f.filename:
+    return None
+  blob = f.read()
+  return blob or None
 
 
 @app.errorhandler(413)
 def _muito_grande(_):
-    return jsonify(error="As fotos ultrapassam o limite de envio. Envie menos fotos."), 413
+  return (
+      jsonify(error="As fotos ultrapassam o limite de envio. Envie menos fotos."),
+      413,
+  )
 
 
-@app.route("/", defaults={"path": ""}, methods=["POST"])
-@app.route("/<path:path>", methods=["POST"])
-def gerar(path):
-    dados, erros = validar_formulario(request.form)
+@app.post("/gerar")
+def gerar():
+  dados, erros = validar_formulario(request.form)
 
-    fotos_raw = [b for b in (_arquivo_enviado(f) for f in request.files.getlist("fotos")) if b]
-    if not fotos_raw:
-        erros["fotos"] = "Envie ao menos uma foto da demanda."
-    elif len(fotos_raw) > MAX_FOTOS:
-        erros["fotos"] = f"Máximo de {MAX_FOTOS} fotos."
-    print_raw = _arquivo_enviado(request.files.get("print"))
+  fotos_raw = [
+      b for b in (_arquivo_enviado(f) for f in request.files.getlist("fotos")) if b
+  ]
+  if not fotos_raw:
+    erros["fotos"] = "Envie ao menos uma foto da demanda."
+  elif len(fotos_raw) > MAX_FOTOS:
+    erros["fotos"] = f"Máximo de {MAX_FOTOS} fotos."
+  print_raw = _arquivo_enviado(request.files.get("print"))
 
-    if erros:
-        return jsonify(errors=erros), 400
+  if erros:
+    return jsonify(errors=erros), 400
 
-    resultado = None
-    try:
-        for max_px, qualidade in PRESETS:
-            fotos = [preparar_imagem(b, max_px, qualidade) for b in fotos_raw]
-            print_app = preparar_imagem(print_raw, max_px, qualidade) if print_raw else None
-            docx_bytes = gerar_docx(dados, fotos, print_app)
-            pdf_bytes = docx_para_pdf(docx_bytes, f"Solicitação - {dados['nome']}")
-            resultado = (docx_bytes, pdf_bytes)
-            if len(docx_bytes) + len(pdf_bytes) <= LIMITE_RESPOSTA:
-                break
-    except OSError:  # PIL: arquivo que não é imagem / corrompido
-        return jsonify(errors={"fotos": "Uma das imagens é inválida ou está corrompida."}), 400
-
-    docx_bytes, pdf_bytes = resultado
-    if len(docx_bytes) + len(pdf_bytes) > LIMITE_RESPOSTA * 1.3:
-        return jsonify(error="Arquivos muito grandes. Reduza a quantidade de fotos."), 413
-
-    hoje = datetime.now(timezone(timedelta(hours=-3))).strftime("%Y%m%d")
-    base = f"Solicitacao_{_slug(dados['nome'])}_{hoje}"
-    b64 = lambda b: base64.b64encode(b).decode("ascii")  # noqa: E731
-    return jsonify(
-        docx={"filename": f"{base}.docx", "base64": b64(docx_bytes)},
-        pdf={"filename": f"{base}.pdf", "base64": b64(pdf_bytes)},
+  resultado = None
+  try:
+    for max_px, qualidade in PRESETS:
+      fotos = [preparar_imagem(b, max_px, qualidade) for b in fotos_raw]
+      print_app = (
+          preparar_imagem(print_raw, max_px, qualidade) if print_raw else None
+      )
+      docx_bytes = gerar_docx(dados, fotos, print_app)
+      pdf_bytes = docx_para_pdf(docx_bytes, f"Solicitação - {dados['nome']}")
+      resultado = (docx_bytes, pdf_bytes)
+      if len(docx_bytes) + len(pdf_bytes) <= LIMITE_RESPOSTA:
+        break
+  except OSError:  # PIL: arquivo corrompido ou inválido
+    return (
+        jsonify(
+            errors={"fotos": "Uma das imagens é inválida ou está corrompida."}
+        ),
+        400,
     )
+
+  docx_bytes, pdf_bytes = resultado
+  if len(docx_bytes) + len(pdf_bytes) > LIMITE_RESPOSTA * 1.3:
+    return (
+        jsonify(error="Arquivos muito grandes. Reduza a quantidade de fotos."),
+        413,
+    )
+
+  hoje = datetime.now(timezone(timedelta(hours=-3))).strftime("%Y%m%d")
+  base = f"Solicitacao_{_slug(dados['nome'])}_{hoje}"
+  b64 = lambda b: base64.b64encode(b).decode("ascii")  # noqa: E731
+  return jsonify(
+      docx={"filename": f"{base}.docx", "base64": b64(docx_bytes)},
+      pdf={"filename": f"{base}.pdf", "base64": b64(pdf_bytes)},
+  )
 
 
 @app.errorhandler(Exception)
 def _erro(e):
-    from werkzeug.exceptions import HTTPException
+  from werkzeug.exceptions import HTTPException
 
-    if isinstance(e, HTTPException):
-        return jsonify(error=e.description), e.code
-    app.logger.exception("Falha ao gerar documento")
-    return jsonify(error="Não foi possível gerar o documento. Tente novamente."), 500
+  if isinstance(e, HTTPException):
+    return jsonify(error=e.description), e.code
+  app.logger.exception("Falha ao gerar documento")
+  return jsonify(error="Não foi possível gerar o documento. Tente novamente."), 500
