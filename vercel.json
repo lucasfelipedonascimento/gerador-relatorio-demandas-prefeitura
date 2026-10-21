@@ -3,9 +3,7 @@
   "builds": [
     {
       "src": "api/gerar.py",
-      "use": "@vercel/python",
-      "maxDuration": 30,
-      "includeFiles": "assets/**"
+      "use": "@vercel/python"
     }
   ],
   "routes": [
