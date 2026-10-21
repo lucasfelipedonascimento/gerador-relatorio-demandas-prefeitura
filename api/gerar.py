@@ -31,11 +31,13 @@ PUBLIC_DIR = os.path.abspath(
 )
 
 
+# Rota para servir a página inicial (Front-end)
 @app.get("/")
 def serve_index():
   return send_from_directory(PUBLIC_DIR, "index.html")
 
 
+# Rota para servir arquivos estáticos (CSS, JS, imagens) da pasta public
 @app.get("/<path:path>")
 def serve_static(path):
   if os.path.exists(os.path.join(PUBLIC_DIR, path)):
@@ -63,6 +65,7 @@ def _muito_grande(_):
   )
 
 
+# Rota da API que processa e gera os arquivos
 @app.post("/gerar")
 def gerar():
   dados, erros = validar_formulario(request.form)
