@@ -2,6 +2,7 @@
 
 Sem banco e sem armazenamento: tudo é gerado em memória e devolvido na resposta.
 """
+
 import base64
 import os
 import re
@@ -11,11 +12,12 @@ from datetime import datetime, timedelta, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from flask import Flask, jsonify, request  # noqa: E402
+from flask import Flask, jsonify, request, send_from_directory  # noqa: E402
 
 from lib.docx_builder import gerar_docx, preparar_imagem  # noqa: E402
 from lib.pdf_builder import docx_para_pdf  # noqa: E402
 from lib.validators import validar_formulario  # noqa: E402
+
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # a Vercel já corta em 4,5 MB
@@ -24,6 +26,34 @@ MAX_FOTOS = 10
 LIMITE_RESPOSTA = 3_200_000  # bytes (docx + pdf) -> ~4,3 MB em base64, abaixo de 4,5 MB
 # (lado máximo em px, qualidade JPEG): tenta o melhor e vai reduzindo se a resposta ficar grande
 PRESETS = [(1100, 72), (900, 62), (720, 52), (600, 45)]
+
+# Inicializa o app Flask apontando a pasta 'public' correta para o ambiente da Vercel
+PUBLIC_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "..", "public")
+)
+
+app = Flask(__name__)
+
+
+# Rota GET para servir o front-end (index.html)
+@app.get("/")
+def serve_index():
+  return send_from_directory(PUBLIC_DIR, "index.html")
+
+
+# (Opcional) Se você tiver arquivos estáticos como CSS/JS dentro da pasta public
+@app.get("/<path:path>")
+def serve_static(path):
+  if os.path.exists(os.path.join(PUBLIC_DIR, path)):
+    return send_from_directory(PUBLIC_DIR, path)
+  return "Not Found", 404
+
+
+# O restante da sua rota de API continua aqui...
+@app.post("/gerar")  # ou a rota que você usa para gerar o documento
+def gerar():
+  # Sua lógica de backend existente
+  pass
 
 
 def _slug(texto: str) -> str:

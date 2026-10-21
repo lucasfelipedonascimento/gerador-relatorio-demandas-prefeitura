@@ -8,6 +8,10 @@
   ],
   "routes": [
     {
+      "src": "/assets/(.*)",
+      "destination": "/assets/$1"
+    },
+    {
       "src": "/(.*)",
       "destination": "api/gerar.py"
     }
