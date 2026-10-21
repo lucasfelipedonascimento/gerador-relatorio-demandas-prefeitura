@@ -4,5 +4,18 @@
       "maxDuration": 30,
       "includeFiles": "assets/**"
     }
-  }
+  },
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/gerar.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "destination": "api/gerar.py"
+    }
+  ]
 }
