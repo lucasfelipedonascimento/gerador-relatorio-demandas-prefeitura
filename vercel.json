@@ -8,12 +8,12 @@
   ],
   "routes": [
     {
-      "src": "/assets/(.*)",
-      "destination": "/assets/$1"
+      "src": "/gerar",
+      "destination": "api/gerar.py"
     },
     {
       "src": "/(.*)",
-      "destination": "api/gerar.py"
+      "destination": "/public/$1"
     }
   ]
 }
