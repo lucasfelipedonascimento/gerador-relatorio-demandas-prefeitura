@@ -72,8 +72,9 @@ def _muito_grande(_):
   )
 
 
-# Rota da API que processa e gera os arquivos
+# Rota da API que processa e gera os arquivos (aceita /gerar e /api/gerar)
 @app.post("/gerar")
+@app.post("/api/gerar")
 def gerar():
   dados, erros = validar_formulario(request.form)
 
