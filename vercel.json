@@ -1,0 +1,8 @@
+{
+  "functions": {
+    "api/gerar.py": {
+      "maxDuration": 30,
+      "includeFiles": "assets/**"
+    }
+  }
+}

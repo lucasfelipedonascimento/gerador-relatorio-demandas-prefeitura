@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solicitação à Prefeitura – Conselho Popular</title>
+<style>
+  :root{
+    --bg:#f3f6f4; --card:#fff; --txt:#1c2a24; --muted:#5d6e66; --line:#d4ddd8;
+    --brand:#0f7a4f; --brand-d:#0b5e3c; --err:#c0392b; --ok:#0f7a4f; --chip:#e7f2ec;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#101613;--card:#18211d;--txt:#e8efeb;--muted:#9bb0a6;--line:#2e3d36;--brand:#2fb57f;--brand-d:#3cc791;--err:#ff7b6b;--ok:#2fb57f;--chip:#1e2f27}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  main{max-width:680px;margin:0 auto;padding:20px 16px 48px}
+  header{margin:8px 0 18px}
+  h1{font-size:1.45rem;margin:0 0 4px}
+  header p{margin:0;color:var(--muted)}
+  form,.result{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+  .field{margin-bottom:18px}
+  label,.lbl{display:block;font-weight:600;margin-bottom:6px}
+  .req{color:var(--err)} .opt{color:var(--muted);font-weight:400;font-size:.88rem}
+  input[type=text],input[type=tel],select,textarea{
+    width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:transparent;color:inherit;font:inherit}
+  textarea{min-height:140px;resize:vertical}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--brand);outline-offset:1px}
+  .invalid{border-color:var(--err)!important}
+  .hint{font-size:.85rem;color:var(--muted);margin-top:4px}
+  .error{font-size:.88rem;color:var(--err);margin-top:4px;min-height:0}
+  .row{display:grid;grid-template-columns:1fr;gap:0 14px}
+  @media(min-width:560px){.row{grid-template-columns:1fr 1fr}}
+  .chip{display:inline-block;background:var(--chip);color:var(--brand-d);border-radius:20px;padding:2px 10px;font-size:.82rem;margin-top:6px}
+  .drop{display:flex;align-items:center;justify-content:center;gap:8px;border:2px dashed var(--line);border-radius:12px;padding:16px;cursor:pointer;color:var(--muted);text-align:center}
+  .drop:hover,.drop:focus-within{border-color:var(--brand);color:var(--brand)}
+  .drop input{position:absolute;opacity:0;width:1px;height:1px}
+  .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px;margin-top:12px}
+  .thumb{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#0002}
+  .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .thumb button{position:absolute;top:4px;right:4px;width:26px;height:26px;border:0;border-radius:50%;background:#000a;color:#fff;font-size:16px;line-height:1;cursor:pointer}
+  .thumb .busy{position:absolute;inset:0;display:grid;place-items:center;background:#0008;color:#fff;font-size:.8rem}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px 18px;border:0;border-radius:12px;background:var(--brand);color:#fff;font:inherit;font-weight:700;cursor:pointer;text-decoration:none}
+  .btn:hover{background:var(--brand-d)} .btn:disabled{opacity:.6;cursor:wait}
+  .btn.sec{background:transparent;color:var(--brand);border:2px solid var(--brand)}
+  .spin{width:18px;height:18px;border:3px solid #fff6;border-top-color:#fff;border-radius:50%;animation:s .8s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+  .alert{background:#c0392b18;border:1px solid var(--err);color:var(--err);padding:10px 12px;border-radius:10px;margin-bottom:14px}
+  .result{text-align:center}
+  .result h2{margin:0 0 6px} .result p{color:var(--muted);margin:0 0 18px}
+  .dl{display:grid;gap:10px}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Solicitação à Prefeitura</h1>
+    <p>Preencha os dados abaixo para gerar o documento (Word e PDF).</p>
+  </header>
+
+  <form id="form" novalidate>
+    <div id="alert" class="alert" role="alert" hidden></div>
+
+    <div class="field">
+      <label for="regiao">Nº da Região do Conselho Popular <span class="req">*</span></label>
+      <select id="regiao" name="regiao" required>
+        <option value="" selected disabled>Selecione…</option>
+        <option value="4ª Região">4ª Região</option>
+      </select>
+      <div class="error" data-err="regiao"></div>
+    </div>
+
+    <div class="field">
+      <label for="nome">Nome completo <span class="req">*</span></label>
+      <input type="text" id="nome" name="nome" autocomplete="name" maxlength="120" required>
+      <div class="error" data-err="nome"></div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="cpf">CPF <span class="req">*</span></label>
+        <input type="text" id="cpf" name="cpf" inputmode="numeric" placeholder="000.000.000-00" maxlength="14" required>
+        <div class="error" data-err="cpf"></div>
+      </div>
+      <div class="field">
+        <label for="telefone">Telefone (WhatsApp) <span class="req">*</span></label>
+        <input type="tel" id="telefone" name="telefone" inputmode="numeric" autocomplete="tel-national" placeholder="(83) 99999-9999" maxlength="15" required>
+        <div class="error" data-err="telefone"></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="cep">Nº do CEP <span class="req">*</span></label>
+      <input type="text" id="cep" name="cep" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9" required>
+      <div class="hint" id="cepStatus">O endereço e o bairro são preenchidos automaticamente.</div>
+      <div class="error" data-err="cep"></div>
+    </div>
+
+    <div class="field">
+      <label for="endereco">Endereço completo <span class="req">*</span></label>
+      <input type="text" id="endereco" name="endereco" maxlength="200" autocomplete="street-address" required>
+      <div class="hint">Inclua o número (ex.: Rua das Flores, 123).</div>
+      <div class="error" data-err="endereco"></div>
+    </div>
+
+    <div class="field">
+      <label for="bairro">Bairro <span class="req">*</span></label>
+      <input type="text" id="bairro" name="bairro" maxlength="100" required>
+      <div class="error" data-err="bairro"></div>
+    </div>
+
+    <div class="field">
+      <label for="demanda">Descreva sua demanda <span class="req">*</span></label>
+      <textarea id="demanda" name="demanda" maxlength="5000" required></textarea>
+      <div class="hint"><span id="cnt">0</span>/5000 caracteres</div>
+      <div class="error" data-err="demanda"></div>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Fotos da demanda <span class="req">*</span></span>
+      <label class="drop" for="fotos">📷 Toque para adicionar fotos (até 10)
+        <input type="file" id="fotos" accept="image/jpeg,image/png,image/webp" multiple>
+      </label>
+      <div class="hint" id="fotosInfo">As fotos são reduzidas automaticamente para caberem no documento.</div>
+      <div class="thumbs" id="fotosThumbs"></div>
+      <div class="error" data-err="fotos"></div>
+    </div>
+
+    <div class="field">
+      <label for="protocolo">Protocolo do processo no app “João Pessoa na Palma da Mão” <span class="opt">(opcional)</span></label>
+      <input type="text" id="protocolo" name="protocolo" maxlength="60" autocomplete="off">
+      <div class="error" data-err="protocolo"></div>
+    </div>
+
+    <div class="field">
+      <span class="lbl">Print da solicitação no app “João Pessoa na Palma da Mão” <span class="opt">(opcional – 1 imagem)</span></span>
+      <label class="drop" for="print">📱 Toque para adicionar o print
+        <input type="file" id="print" accept="image/jpeg,image/png,image/webp">
+      </label>
+      <div class="thumbs" id="printThumbs"></div>
+      <div class="error" data-err="print"></div>
+    </div>
+
+    <button class="btn" id="submit" type="submit">Gerar Documento</button>
+  </form>
+
+  <section class="result" id="result" hidden>
+    <h2>✅ Documento gerado!</h2>
+    <p>Baixe os arquivos abaixo. Eles não ficam salvos em nenhum servidor.</p>
+    <div class="dl">
+      <a class="btn" id="dlDocx" href="#">⬇ Baixar Word (.docx)</a>
+      <a class="btn" id="dlPdf" href="#">⬇ Baixar PDF</a>
+      <button class="btn sec" id="novo" type="button">Gerar outro documento</button>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const MAX_FOTOS = 10;
+  const LIMITE_ENVIO = 4_000_000; // Vercel aceita ~4,5 MB por requisição
+  const PRESETS = [[1280, 0.72], [1000, 0.6], [800, 0.5], [640, 0.42]];
+
+  const state = { fotos: [], print: null, urls: [] };
+
+  /* ---------- Máscaras ---------- */
+  const digits = (v) => v.replace(/\D/g, '');
+  const maskCpf = (v) => {
+    const d = digits(v).slice(0, 11);
+    return d.replace(/^(\d{3})(\d)/, '$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1-$2');
+  };
+  const maskCep = (v) => digits(v).slice(0, 8).replace(/^(\d{5})(\d)/, '$1-$2');
+  const maskTel = (v) => {
+    const d = digits(v).slice(0, 11);
+    if (d.length <= 2) return d ? '(' + d : '';
+    if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+    if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  };
+  const bindMask = (el, fn) => el.addEventListener('input', () => { el.value = fn(el.value); });
+  bindMask($('cpf'), maskCpf); bindMask($('cep'), maskCep); bindMask($('telefone'), maskTel);
+
+  // Só aceita números nos campos numéricos (bloqueia letras já na digitação)
+  ['cpf', 'cep', 'telefone'].forEach((id) =>
+    $(id).addEventListener('beforeinput', (e) => {
+      if (e.data && /\D/.test(e.data)) e.preventDefault();
+    }));
+
+  $('demanda').addEventListener('input', (e) => { $('cnt').textContent = e.target.value.length; });
+
+  /* ---------- Validação ---------- */
+  function cpfValido(c) {
+    if (c.length !== 11 || /^(\d)\1{10}$/.test(c)) return false;
+    for (const n of [9, 10]) {
+      let s = 0;
+      for (let i = 0; i < n; i++) s += +c[i] * (n + 1 - i);
+      if (((s * 10) % 11) % 10 !== +c[n]) return false;
+    }
+    return true;
+  }
+  const setErr = (campo, msg) => {
+    const box = document.querySelector(`[data-err="${campo}"]`);
+    if (box) box.textContent = msg || '';
+    const el = $(campo);
+    if (el) el.classList.toggle('invalid', !!msg);
+  };
+  function validar() {
+    const e = {};
+    if (!$('regiao').value) e.regiao = 'Selecione a região do Conselho Popular.';
+    const nome = $('nome').value.trim();
+    if (nome.length < 5 || !nome.includes(' ')) e.nome = 'Informe o nome completo.';
+    if (!cpfValido(digits($('cpf').value))) e.cpf = 'CPF inválido.';
+    if (digits($('cep').value).length !== 8) e.cep = 'CEP inválido.';
+    if ($('endereco').value.trim().length < 3) e.endereco = 'Informe o endereço completo.';
+    if ($('bairro').value.trim().length < 2) e.bairro = 'Informe o bairro.';
+    const t = digits($('telefone').value);
+    if (![10, 11].includes(t.length) || (t.length === 11 && t[2] !== '9')) e.telefone = 'Telefone inválido. Use DDD + número.';
+    if ($('demanda').value.trim().length < 10) e.demanda = 'Descreva sua demanda (mín. 10 caracteres).';
+    if (!state.fotos.length) e.fotos = 'Envie ao menos uma foto da demanda.';
+    if (state.fotos.some((f) => f.busy) || (state.print && state.print.busy)) e.fotos = 'Aguarde o processamento das imagens.';
+    return e;
+  }
+  function mostrarErros(erros) {
+    ['regiao', 'nome', 'cpf', 'cep', 'endereco', 'bairro', 'telefone', 'demanda', 'fotos', 'protocolo', 'print']
+      .forEach((c) => setErr(c, erros[c]));
+    const primeiro = Object.keys(erros)[0];
+    if (primeiro) {
+      const alvo = $(primeiro) || document.querySelector(`[data-err="${primeiro}"]`);
+      alvo.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (alvo.focus && $(primeiro)) alvo.focus({ preventScroll: true });
+    }
+  }
+  ['regiao', 'nome', 'cpf', 'cep', 'endereco', 'bairro', 'telefone', 'demanda', 'protocolo']
+    .forEach((id) => $(id).addEventListener('input', () => setErr(id, '')));
+
+  /* ---------- CEP (ViaCEP) ---------- */
+  let cepCtrl = null;
+  $('cep').addEventListener('input', async () => {
+    const cep = digits($('cep').value);
+    const status = $('cepStatus');
+    if (cepCtrl) cepCtrl.abort();
+    if (cep.length !== 8) { status.textContent = 'O endereço e o bairro são preenchidos automaticamente.'; return; }
+    cepCtrl = new AbortController();
+    status.textContent = 'Buscando CEP…';
+    try {
+      const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`, { signal: cepCtrl.signal });
+      const d = await r.json();
+      if (d.erro) { status.textContent = 'CEP não encontrado. Preencha o endereço manualmente.'; return; }
+      if (d.logradouro) { $('endereco').value = d.logradouro; setErr('endereco', ''); }
+      if (d.bairro) { $('bairro').value = d.bairro; setErr('bairro', ''); }
+      status.textContent = `✔ ${d.localidade}/${d.uf} – confira e adicione o número da casa.`;
+      if (d.logradouro) {
+        const el = $('endereco'); el.focus(); el.setSelectionRange(el.value.length, el.value.length);
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') status.textContent = 'Não foi possível consultar o CEP. Preencha manualmente.';
+    }
+  });
+
+  /* ---------- Imagens: compressão no navegador ---------- */
+  async function carregar(file) {
+    if (window.createImageBitmap) {
+      try { return await createImageBitmap(file); } catch (_) { /* tenta <img> */ }
+    }
+    return new Promise((ok, fail) => {
+      const url = URL.createObjectURL(file); const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); ok(img); };
+      img.onerror = () => { URL.revokeObjectURL(url); fail(new Error('decode')); };
+      img.src = url;
+    });
+  }
+  async function comprimir(file, maxPx, q) {
+    const img = await carregar(file);
+    const w0 = img.width, h0 = img.height;
+    const esc = Math.min(1, maxPx / Math.max(w0, h0));
+    const c = document.createElement('canvas');
+    c.width = Math.round(w0 * esc); c.height = Math.round(h0 * esc);
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    if (img.close) img.close();
+    return new Promise((ok, fail) => c.toBlob((b) => (b ? ok(b) : fail(new Error('blob'))), 'image/jpeg', q));
+  }
+
+  function renderThumbs(lista, container, aoRemover) {
+    container.innerHTML = '';
+    lista.forEach((item) => {
+      const d = document.createElement('div'); d.className = 'thumb';
+      if (item.url) { const i = document.createElement('img'); i.src = item.url; i.alt = ''; d.appendChild(i); }
+      if (item.busy) { const b = document.createElement('div'); b.className = 'busy'; b.textContent = 'Processando…'; d.appendChild(b); }
+      else {
+        const x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.title = 'Remover';
+        x.addEventListener('click', () => aoRemover(item)); d.appendChild(x);
+      }
+      container.appendChild(d);
+    });
+  }
+  const renderFotos = () => {
+    renderThumbs(state.fotos, $('fotosThumbs'), (it) => {
+      state.fotos = state.fotos.filter((f) => f !== it); URL.revokeObjectURL(it.url); renderFotos();
+    });
+    const kb = Math.round(state.fotos.reduce((s, f) => s + (f.blob ? f.blob.size : 0), 0) / 1024);
+    $('fotosInfo').textContent = state.fotos.length
+      ? `${state.fotos.length}/${MAX_FOTOS} foto(s) • ${kb} KB após otimização`
+      : 'As fotos são reduzidas automaticamente para caberem no documento.';
+  };
+  const renderPrint = () => renderThumbs(state.print ? [state.print] : [], $('printThumbs'), (it) => {
+    URL.revokeObjectURL(it.url); state.print = null; renderPrint();
+  });
+
+  async function processar(file) {
+    const item = { file, busy: true, blob: null, url: URL.createObjectURL(file) };
+    try {
+      item.blob = await comprimir(file, PRESETS[0][0], PRESETS[0][1]);
+      URL.revokeObjectURL(item.url); item.url = URL.createObjectURL(item.blob);
+    } catch (_) { item.erro = true; }
+    item.busy = false;
+    return item;
+  }
+
+  $('fotos').addEventListener('change', async (e) => {
+    const files = [...e.target.files]; e.target.value = '';
+    setErr('fotos', '');
+    const vagas = MAX_FOTOS - state.fotos.length;
+    if (files.length > vagas) setErr('fotos', `Máximo de ${MAX_FOTOS} fotos. ${vagas > 0 ? 'Algumas foram ignoradas.' : ''}`);
+    for (const f of files.slice(0, Math.max(vagas, 0))) {
+      const placeholder = { file: f, busy: true, url: URL.createObjectURL(f) };
+      state.fotos.push(placeholder); renderFotos();
+      const pronto = await processar(f);
+      URL.revokeObjectURL(placeholder.url);
+      const idx = state.fotos.indexOf(placeholder);
+      if (pronto.erro) {
+        state.fotos.splice(idx, 1); setErr('fotos', `Não foi possível ler “${f.name}”. Use JPG, PNG ou WebP.`);
+      } else state.fotos[idx] = pronto;
+      renderFotos();
+    }
+  });
+
+  $('print').addEventListener('change', async (e) => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    setErr('print', '');
+    if (state.print) URL.revokeObjectURL(state.print.url);
+    state.print = { file: f, busy: true, url: URL.createObjectURL(f) }; renderPrint();
+    const pronto = await processar(f);
+    if (pronto.erro) { state.print = null; setErr('print', 'Não foi possível ler a imagem. Use JPG, PNG ou WebP.'); }
+    else state.print = pronto;
+    renderPrint();
+  });
+
+  /* ---------- Envio ---------- */
+  const alerta = (msg) => { const a = $('alert'); a.textContent = msg || ''; a.hidden = !msg; };
+  const tamanho = (fotos, pr) => fotos.reduce((s, f) => s + f.blob.size, 0) + (pr ? pr.blob.size : 0);
+
+  async function ajustarTamanho() {
+    // Se passar do limite da Vercel, recomprime tudo a partir dos originais com qualidade menor.
+    for (const [px, q] of PRESETS.slice(1)) {
+      if (tamanho(state.fotos, state.print) <= LIMITE_ENVIO) return true;
+      for (const it of [...state.fotos, state.print].filter(Boolean)) it.blob = await comprimir(it.file, px, q);
+    }
+    return tamanho(state.fotos, state.print) <= LIMITE_ENVIO;
+  }
+
+  const b64Blob = (b64, tipo) => {
+    const bin = atob(b64); const u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return new Blob([u8], { type: tipo });
+  };
+
+  $('form').addEventListener('submit', async (ev) => {
+    ev.preventDefault(); alerta('');
+    const erros = validar(); mostrarErros(erros);
+    if (Object.keys(erros).length) return;
+
+    const btn = $('submit'); btn.disabled = true;
+    btn.innerHTML = '<span class="spin"></span> Gerando documento…';
+    try {
+      if (!(await ajustarTamanho())) throw new Error('As fotos ficaram grandes demais. Remova algumas e tente novamente.');
+      const fd = new FormData();
+      ['regiao', 'nome', 'cpf', 'cep', 'endereco', 'bairro', 'telefone', 'demanda', 'protocolo']
+        .forEach((id) => fd.append(id, $(id).value));
+      state.fotos.forEach((f, i) => fd.append('fotos', f.blob, `foto${i + 1}.jpg`));
+      if (state.print) fd.append('print', state.print.blob, 'print.jpg');
+
+      const resp = await fetch('/api/gerar', { method: 'POST', body: fd });
+      let json = null;
+      try { json = await resp.json(); } catch (_) { /* resposta não-JSON */ }
+      if (!resp.ok) {
+        if (json && json.errors) { mostrarErros(json.errors); throw new Error('Corrija os campos destacados.'); }
+        if (resp.status === 413) throw new Error('Os arquivos ultrapassam o limite de envio. Envie menos fotos.');
+        throw new Error((json && json.error) || 'Erro ao gerar o documento. Tente novamente.');
+      }
+
+      state.urls.forEach(URL.revokeObjectURL); state.urls = [];
+      const docxUrl = URL.createObjectURL(b64Blob(json.docx.base64, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'));
+      const pdfUrl = URL.createObjectURL(b64Blob(json.pdf.base64, 'application/pdf'));
+      state.urls.push(docxUrl, pdfUrl);
+      Object.assign($('dlDocx'), { href: docxUrl, download: json.docx.filename });
+      Object.assign($('dlPdf'), { href: pdfUrl, download: json.pdf.filename });
+      $('form').hidden = true; $('result').hidden = false;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      alerta(err.message || 'Erro inesperado.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } finally {
+      btn.disabled = false; btn.textContent = 'Gerar Documento';
+    }
+  });
+
+  $('novo').addEventListener('click', () => {
+    state.urls.forEach(URL.revokeObjectURL); state.urls = [];
+    state.fotos.forEach((f) => f.url && URL.revokeObjectURL(f.url)); state.fotos = [];
+    if (state.print) URL.revokeObjectURL(state.print.url); state.print = null;
+    $('form').reset(); $('cnt').textContent = '0';
+    renderFotos(); renderPrint(); alerta('');
+    $('cepStatus').textContent = 'O endereço e o bairro são preenchidos automaticamente.';
+    $('result').hidden = true; $('form').hidden = false;
+    window.scrollTo({ top: 0 });
+  });
+})();
+</script>
+</body>
+</html>
